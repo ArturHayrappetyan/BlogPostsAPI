@@ -1,5 +1,6 @@
 
 using BlogPostsAPI.Data;
+using BlogPostsAPI.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace BlogPostsAPI
@@ -12,6 +13,9 @@ namespace BlogPostsAPI
 
             // Add services to the container.
             builder.Services.AddControllers();
+
+            builder.Services.AddScoped<IBlogRepository, BlogRepository>();
+            builder.Services.AddScoped<IPostRepository, PostRepository>();
 
             // Register DbContext with PostgreSQL provider
             builder.Services.AddDbContext<BlogContext>(options =>

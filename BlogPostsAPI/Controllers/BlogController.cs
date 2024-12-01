@@ -1,5 +1,7 @@
 ﻿using BlogPostsAPI.Data;
+using BlogPostsAPI.DTOs;
 using BlogPostsAPI.Models;
+using BlogPostsAPI.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,36 +11,50 @@ namespace BlogPostsAPI.Controllers
     [ApiController]
     public class BlogController : ControllerBase
     {
-        private readonly BlogContext _context;
+        private readonly IBlogRepository _blogRepository;
 
-        public BlogController(BlogContext context)
+        public BlogController(IBlogRepository blogRepository)
         {
-            _context = context;
+            _blogRepository = blogRepository;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Blog>>> GetBlogs()
+        public async Task<ActionResult<IEnumerable<BlogDTO>>> GetBlogs()
         {
-            return await _context.Blogs.Include(b => b.Posts).ToListAsync();
+            var blogs = await _blogRepository.GetAllBlogsAsync();
+            var blogDTOs = blogs.Select(b => new BlogDTO
+            {
+                BlogId = b.Id,
+                Name = b.Name
+            }).ToList();
+
+            return blogDTOs;
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Blog>> GetBlog(int id)
+        public async Task<ActionResult<BlogDTO>> GetBlog(int id)
         {
-            Blog? blog = await _context.Blogs.Include(b => b.Posts).FirstOrDefaultAsync(b => b.Id == id);
-            
-            if (blog == null) 
+            var blog = await _blogRepository.GetBlogByIdAsync(id);
+
+            if (blog == null)
                 return NotFound();
 
-            return blog;
+            var blogDTO = new BlogDTO
+            {
+                BlogId = blog.Id,
+                Name = blog.Name
+            };
+
+            return blogDTO;
         }
 
         [HttpPost]
-        public async Task<ActionResult<Blog>> Create(Blog blog)
+        public async Task<ActionResult<BlogDTO>> Create(BlogDTO blogDTO)
         {
-            _context.Blogs.Add(blog);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetBlog), new { id = blog.Id }, blog);
+            var blog = new Blog { Name = blogDTO.Name };
+
+            var createdBlog = await _blogRepository.AddBlogAsync(blog);
+            return CreatedAtAction(nameof(GetBlogs), new { id = createdBlog.Id }, blogDTO);
         }
     }
 }

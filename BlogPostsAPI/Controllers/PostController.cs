@@ -1,5 +1,7 @@
 ﻿using BlogPostsAPI.Data;
+using BlogPostsAPI.DTOs;
 using BlogPostsAPI.Models;
+using BlogPostsAPI.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,30 +11,45 @@ namespace BlogPostsAPI.Controllers
     [ApiController]
     public class PostController : ControllerBase
     {
-        private readonly BlogContext _context;
+        private readonly IPostRepository _postRepository;
 
-        public PostController(BlogContext context)
+        public PostController(IPostRepository postRepository)
         {
-            _context = context;
+            _postRepository = postRepository;
         }
 
         [HttpPost]
-        public async Task<ActionResult<Post>> CreatePost(Post post)
+        public async Task<ActionResult<PostDTO>> CreatePost(PostDTO postDTO)
         {
-            _context.Posts.Add(post);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetPost),new {id = post.Id},post);
+            var post = new Post
+            {
+                Title = postDTO.Title,
+                Content = postDTO.Content,
+                BlogId = postDTO.BlogId,
+            };
+
+            var createdPost = await _postRepository.AddPostAsync(post);
+            return CreatedAtAction(nameof(GetPost),new {id = createdPost.Id},postDTO);
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Post>> GetPost(int id)
+        public async Task<ActionResult<PostDTO>> GetPost(int id)
         {
-            Post? post = await _context.Posts.FindAsync(id);
-
-            if (post == null) 
+            var post = await _postRepository.GetPostByIdAsync(id);
+            if(post == null)
+            {
                 return NotFound();
+            }
 
-            return post;
+            var postDTO = new PostDTO
+            {
+                PostId = post.Id,
+                Title = post.Title,
+                Content = post.Content,
+                BlogId = post.BlogId,
+            };
+
+            return postDTO;
         }
     }
 }
